@@ -92,8 +92,8 @@ impl<D> CoverTree<D> where D: PartialEq {
 						 where T: Iterator<Item=D> {
 
 		let mut tree = CoverTree {root: None, 
-				   			  metric: metric, 
-				   			  span_factor: 1.3};
+				   			      metric: metric, 
+				   			      span_factor: 1.3};
 		tree.insert_all(items);
 		tree
 	}
