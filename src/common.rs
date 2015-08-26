@@ -2,7 +2,7 @@
 pub trait NearestNeighbor<D> where D: PartialEq {
 	type Node;
 	
-	// fn find_nearest(data: &D) -> &D;
+	fn find_nearest<'a>(&'a self, query: &'a D) -> Option<&'a D>;
 	fn insert(&mut self, data: D);
 	fn distance(&self, a: &D, b: &D) -> f64;
 }
