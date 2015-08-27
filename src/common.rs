@@ -1,13 +1,48 @@
 
-pub trait NearestNeighbor<D> where D: PartialEq {
+pub trait NearestNeighbor<D> where D: Metric {
 	type Node;
 	
-	fn find_nearest<'a>(&'a self, query: &'a D) -> Option<&'a D>;
+	fn find_nearest<'a>(&'a self, query: D) -> Option<&'a D>;
 	fn insert(&mut self, data: D);
-	fn distance(&self, a: &D, b: &D) -> f64;
 }
 
 
-pub type Metric<D> = fn(a: &D, b: &D) -> f64;
+pub trait CoverTreeData: Metric + PartialEq + PartialOrd + Copy {}
 
+pub trait Metric<RHS=Self> {
+	type Output: PartialOrd;
+	fn distance(self, rhs: RHS) -> Self::Output;
+}
 
+// macro_rules! implement_primitive_metric {
+// 	($imp:ident, $t:ty, $u:ty) => {
+// 		impl common::Metric<$t> for $imp {
+// 		    type Output = $u;
+// 		    fn distance(self, rhs: $t) -> Self::Output {
+// 		        (rhs - self).abs() as $u
+// 		    }
+// 		}
+
+// 		impl<'a> common::Metric<$t> for &'a $imp {
+// 		    type Output = $u;
+// 		    fn distance(self, rhs: $t) -> Self::Output {
+// 		        (rhs - self).abs() as $u
+// 		    }
+// 		}
+
+// 		impl<'b> common::Metric<&'b $t> for $imp {
+// 		    type Output = $u;
+// 		    fn distance(self, rhs: &'b $t) -> Self::Output {
+// 		        (rhs - self).abs() as $u
+// 		    }
+// 		}
+
+// 		impl<'a, 'b> common::Metric<&'b $t> for &'a $imp {
+// 		    type Output = $u;
+
+// 		    fn distance(self, rhs:&'b $t) -> Self::Output {
+// 		        (rhs - self).abs() as $u
+// 		    }
+// 		}
+// 	}
+// }

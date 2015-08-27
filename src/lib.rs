@@ -2,17 +2,41 @@
 pub mod common;
 pub mod simple;
 
-#[test]
-fn it_works() {
-    use common::NearestNeighbor;
+type TreeItem = f64;
 
-    fn dist(a: &i32, b: &i32) -> f64 {
-        (b - a).abs() as f64
+impl common::Metric<f64> for TreeItem {
+    type Output = f64;
+    fn distance(self, rhs: f64) -> Self::Output {
+        (rhs - self).abs() as f64
     }
-
-    let mut ct = simple::CoverTree::new(dist as common::Metric<i32>);
-
-    ct.insert(34i32);
-    ct.insert(31i32);
-    assert_eq!(ct.find_nearest(&30i32), Some(&31i32));
 }
+
+impl<'a> common::Metric<f64> for &'a TreeItem {
+    type Output = f64;
+    fn distance(self, rhs: f64) -> Self::Output {
+        (rhs - self).abs() as f64
+    }
+}
+
+impl<'b> common::Metric<&'b f64> for TreeItem {
+    type Output = f64;
+    fn distance(self, rhs: &'b f64) -> Self::Output {
+        (rhs - self).abs() as f64
+    }
+}
+
+impl<'a, 'b> common::Metric<&'b f64> for &'a TreeItem {
+    type Output = f64;
+
+    fn distance(self, rhs:&'b f64) -> Self::Output {
+        (rhs - self).abs() as f64
+    }
+}
+
+#[test]
+fn test_node() {
+    use simple::CoverTreeNode;
+
+}
+
+
