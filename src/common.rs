@@ -13,8 +13,7 @@ pub trait NearestNeighbor<D> where D: Metric {
 pub trait CoverTreeData: Metric + PartialEq + PartialOrd + Copy {}
 
 pub trait Metric<RHS=Self> {
-	type Output: Num + PartialOrd + Copy;
-	fn distance(self, rhs: RHS) -> Self::Output;
+	fn distance(self, rhs: RHS) -> f64;
 }
 
 // macro_rules! implement_primitive_metric {

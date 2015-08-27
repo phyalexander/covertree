@@ -7,7 +7,7 @@ pub struct CoverTreeNode<D> where D: CoverTreeData {
     data: D,
     children: RefCell<Vec<CoverTreeNode<D>>>,
     level: usize,
-    max_distance: <D as Metric>::Output
+    max_distance: f64
 }
 
 impl<D> CoverTreeNode<D> where D: CoverTreeData {
@@ -15,15 +15,15 @@ impl<D> CoverTreeNode<D> where D: CoverTreeData {
         CoverTreeNode {data:data, 
                        children: RefCell::new(Vec::new()), 
                        level: level,
-                       max_distance: <<D as Metric>::Output as Zero>::zero()}
+                       max_distance: 0.0}
     }
 
     fn cover_distance(&self, span_factor: f64) -> f64 {
-        span_factor.powf(self.level as f64)
+        span_factor.powf(self.level as f64) as f64
     }
 
     fn seperation_distance(&self, span_factor: f64) -> f64 {
-        span_factor.powf((self.level - 1) as f64)
+        span_factor.powf((self.level - 1) as f64) as f64
     }
 
     fn find_nearest<'a>(&'a self, 
