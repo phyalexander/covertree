@@ -1,14 +1,13 @@
 
 use super::common::{NearestNeighbor, Metric, CoverTreeData};
 use std::cell::RefCell;
+use num::traits::Zero;
 
-
-#[derive(Debug)]
 pub struct CoverTreeNode<D> where D: CoverTreeData {
     data: D,
     children: RefCell<Vec<CoverTreeNode<D>>>,
     level: usize,
-    max_distance: f64
+    max_distance: <D as Metric>::Output
 }
 
 impl<D> CoverTreeNode<D> where D: CoverTreeData {
@@ -16,7 +15,7 @@ impl<D> CoverTreeNode<D> where D: CoverTreeData {
         CoverTreeNode {data:data, 
                        children: RefCell::new(Vec::new()), 
                        level: level,
-                       max_distance: 0.0}
+                       max_distance: <<D as Metric>::Output as Zero>::zero()}
     }
 
     fn cover_distance(&self, span_factor: f64) -> f64 {
@@ -49,12 +48,11 @@ impl<D> CoverTreeNode<D> where D: CoverTreeData {
             nearest_yet
         };
 
-        // for child_ref in self.children.borrow().into_inner() {
-        //     let child = child_ref.borrow();
-        //     if nearest.distance(query) > child.data.distance(query)-self.max_distance {
-        //         nearest = child.find_nearest(query, &nearest);
-        //     }
-        // }
+        for child in self.children.borrow().iter() {
+            if nearest.distance(query) > nearest.distance(self.data) - self.max_distance {
+            }
+        }
+
 
         &nearest
     }

@@ -1,4 +1,7 @@
 
+use std::ops;
+use num::traits::Num;
+
 pub trait NearestNeighbor<D> where D: Metric {
 	type Node;
 	
@@ -10,7 +13,7 @@ pub trait NearestNeighbor<D> where D: Metric {
 pub trait CoverTreeData: Metric + PartialEq + PartialOrd + Copy {}
 
 pub trait Metric<RHS=Self> {
-	type Output: PartialOrd;
+	type Output: Num + PartialOrd + Copy;
 	fn distance(self, rhs: RHS) -> Self::Output;
 }
 

@@ -1,4 +1,6 @@
 
+extern crate num;
+
 pub mod common;
 pub mod simple;
 

@@ -2,3 +2,6 @@
 name = "covertree"
 version = "0.1.0"
 authors = ["Skylor R Schermer <skyschermer@gmail.com>"]
+
+[dependencies]
+num = "*"
