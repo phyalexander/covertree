@@ -1,7 +1,4 @@
 
-use std::ops;
-use num::traits::Num;
-
 pub trait NearestNeighbor<D> where D: Metric {
 	type Node;
 	

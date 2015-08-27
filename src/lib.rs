@@ -31,10 +31,9 @@ impl<'a, 'b> common::Metric<&'b f64> for &'a TreeItem {
     }
 }
 
+
 #[test]
 fn test_node() {
-    use simple::CoverTreeNode;
 
 }
-
 
