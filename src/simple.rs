@@ -1,6 +1,6 @@
 
 use super::common::{NearestNeighbor, Metric, CoverTreeData};
-
+use std::cmp::Ordering;
 pub struct CoverTreeNode<D> where D: CoverTreeData {
     /// The data stored in the node.
     data: D,
@@ -23,25 +23,24 @@ impl<D> CoverTreeNode<D> where D: CoverTreeData {
     }
 
     fn cover_distance(&self, span_factor: f64) -> f64 {
-        span_factor.powf(self.level as f64) as f64
+        span_factor.powf(self.level as f64)
     }
 
     fn seperation_distance(&self, span_factor: f64) -> f64 {
-        span_factor.powf((self.level - 1) as f64) as f64
+        span_factor.powf((self.level - 1) as f64)
     }
 
     // Pseudocode from paper:
     // function findNearestNeighbor(cover tree p, 
     //                              query point x, 
     //                              nearest neighbor so far y)
-    // 
-    //  if d(p, x) < d(y, x) then
-    //      y←p
-    //  for each child q of p sorted by distance to x do
-    //      if d(y, x) > d(y, q) − maxdist(q) then
-    //          y ← findNearestNeighbor(q, x, y)
-    //      return y 
-    pub fn find_nearest<'a>(&'a self, 
+    //     if d(p, x) < d(y, x) then
+    //         y←p
+    //     for each child q of p sorted by distance to x do
+    //         if d(y, x) > d(y, q) − maxdist(q) then
+    //             y ← findNearestNeighbor(q, x, y)
+    //         return y 
+    pub fn find_nearest<'a>(&'a mut self, 
                             query: D,
                             nearest_yet: &'a D) 
                             -> &'a D {
@@ -52,7 +51,11 @@ impl<D> CoverTreeNode<D> where D: CoverTreeData {
             nearest_yet
         };
 
-        if let Some(ref children) = self.children {
+        if let Some(ref mut children) = self.children {
+            children.sort_by(|a: &CoverTreeNode<D>, 
+                              b: &CoverTreeNode<D>| a.data.distance(query)
+                                                          .partial_cmp(&b.data.distance(query))
+                                                          .unwrap_or(Ordering::Equal));
             for child in children {
                 if nearest.distance(query) > nearest.distance(child.data) - child.max_distance {
                     nearest = child.find_nearest(query, &nearest);
@@ -64,20 +67,20 @@ impl<D> CoverTreeNode<D> where D: CoverTreeData {
 
     // Pseudocode from paper:
     // function insert(cover tree p, data point x) 
-    //   if d(p, x) > covdist(p) then
-    //     while d(p, x) > 2*covdist(p) do
-    //       Remove any leaf q from p
-    //       p′ ← tree with root q and p as only child
-    //       p ← p′
-    //     return tree with x as root and p as only child
-    //   return insert_(p, x)
+    //     if d(p, x) > covdist(p) then
+    //         while d(p, x) > 2*covdist(p) do
+    //             Remove any leaf q from p
+    //             p′ ← tree with root q and p as only child
+    //             p ← p′
+    //         return tree with x as root and p as only child
+    //     return insert_(p, x)
     pub fn insert(&mut self,
                   data: D,
                   span_factor: f64) {
 
 
         if self.data.distance(data) > self.cover_distance(span_factor) {
-            while self.data.distance(data) > self.cover_distance(span_factor) *2f64 {
+            while self.data.distance(data) > self.cover_distance(span_factor) * 2f64 {
 
                 // todo
             }
@@ -87,13 +90,13 @@ impl<D> CoverTreeNode<D> where D: CoverTreeData {
 
     // Pseudocode from paper:
     // function insert_(cover tree p, data point x)
-    //   prerequisites: d(p,x) ≤ covdist(p)
-    //   for q ∈ children(p) do
-    //      if d(q, x) ≤ covdist(q) then
-    //        q′ ← insert_(q, x)
-    //        p′ ← p with child q replaced with q′
-    //        return p′
-    //   return p with x added as a child 
+    //     prerequisites: d(p,x) ≤ covdist(p)
+    //     for q ∈ children(p) do
+    //          if d(q, x) ≤ covdist(q) then
+    //              q′ ← insert_(q, x)
+    //              p′ ← p with child q replaced with q′
+    //              return p′
+    //     return p with x added as a child 
     fn insert_(&mut self,
                data: D,
                span_factor: f64) {
@@ -102,12 +105,13 @@ impl<D> CoverTreeNode<D> where D: CoverTreeData {
                 "CoverTree invariant violated: d(p,x) ≤ covdist(p)");  
         
         if let Some(ref mut children) = self.children {
-            for child in children {
+            for child in children.iter_mut() {
                 if child.data.distance(data) <= child.cover_distance(span_factor) {
                     child.insert_(data, span_factor);
                     return;
                 }
             }
+            children.push(CoverTreeNode::new(data, self.level - 1));
         } else {
             self.children = Some(vec![CoverTreeNode::new(data, self.level - 1)]);
         }
