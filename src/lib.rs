@@ -33,7 +33,7 @@ impl<'a, 'b> common::Metric<&'b f64> for &'a TreeItem {
 
 
 #[test]
-fn test_node() {
+fn test_simple_cover_tree() {
 
 }
 
