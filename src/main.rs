@@ -1,9 +1,12 @@
 
-extern crate num;
 extern crate treedisplay;
 
-pub mod common;
 pub mod simple;
+pub mod common;
+
+use simple::CoverTree;
+use common::NearestNeighbor;
+use treedisplay::TreeDisplay;
 
 type TreeItem = f64;
 
@@ -34,16 +37,29 @@ impl<'a, 'b> common::Metric<&'b f64> for &'a TreeItem {
 
 impl common::CoverTreeData for TreeItem {}
 
-#[test]
-fn test_simple_cover_tree() {
-    use simple::CoverTree;
-    use common::NearestNeighbor;
+#[allow(dead_code)]
+fn main() {
+
     let mut ct: CoverTree<TreeItem> = CoverTree::new();
 
     ct.insert(5f64);
-    ct.insert(8f64);
+    println!("{}\n", ct.tree_string());
     ct.insert(15f64);
+    println!("{}\n", ct.tree_string());
+    ct.insert(16f64);
+    println!("{}\n", ct.tree_string());
+    ct.insert(23f64);
+    println!("{}\n", ct.tree_string());
+    ct.insert(1f64);
+    ct.insert(11f64);
+    ct.insert(12f64);
+    ct.insert(18f64);
+    println!("{}\n", ct.tree_string());
+    ct.insert(81f64);
+    ct.insert(91f64);
+    ct.insert(10f64);
+    println!("{}\n", ct.tree_string());
 
-    assert_eq!(ct.find_nearest(10f64), Some(&8f64));
+
+    println!("Nearest: {}", ct.find_nearest(66f64).unwrap());
 }
-

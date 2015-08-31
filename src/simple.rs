@@ -1,7 +1,9 @@
 
 use super::common::{NearestNeighbor, Metric, CoverTreeData};
-use std::cmp::Ordering;
-
+use treedisplay::TreeDisplay;
+use std::fmt;
+use std::mem;
+use std::cmp;
 
 pub struct CoverTreeNode<D> where D: CoverTreeData {
     /// The data stored in the node.
@@ -28,9 +30,9 @@ impl<D> CoverTreeNode<D> where D: CoverTreeData {
         span_factor.powf(self.level as f64)
     }
 
-    fn seperation_distance(&self, span_factor: f64) -> f64 {
-        span_factor.powf((self.level - 1) as f64)
-    }
+    // fn seperation_distance(&self, span_factor: f64) -> f64 {
+    //     span_factor.powf((self.level - 1) as f64)
+    // }
 
     // Pseudocode from paper:
     // function findNearestNeighbor(cover tree p, 
@@ -44,39 +46,64 @@ impl<D> CoverTreeNode<D> where D: CoverTreeData {
     //     return y 
     fn find_nearest<'a>(&'a mut self, 
                         query: D,
-                        nearest_yet: &'a D) 
+                        nearest_yet: Option<&'a D>) 
                         -> &'a D {
 
-        let mut nearest = if &self.data.distance(query) < &nearest_yet.distance(query) { 
+        let mut nearest = if nearest_yet.is_none() ||
+                             &self.data.distance(query) < &nearest_yet.expect("data is nearest yet")
+                                                                      .distance(query) { 
             &self.data 
         } else {
-            nearest_yet
+            nearest_yet.expect("provided is nearest yet")
         };
+
+
 
         if let Some(ref mut children) = self.children {
             children.sort_by(|a: &CoverTreeNode<D>, 
                               b: &CoverTreeNode<D>| a.data.distance(query)
                                                           .partial_cmp(&b.data.distance(query))
-                                                          .unwrap_or(Ordering::Equal));
+                                                          .expect("sort by distance to target"));
             for child in children {
                 if nearest.distance(query) > nearest.distance(child.data) - child.max_distance {
-                    nearest = child.find_nearest(query, &nearest);
+                    nearest = child.find_nearest(query, Some(&nearest));
                 }
             }
         }
         &nearest
     }
 
+    fn validate(&mut self) {
+        self.max_distance = 0f64;
+        self.level = 0;
+        if let Some(ref mut children) = self.children {
+            for child in children {
+                child.validate();
+                self.level = cmp::max(self.level, child.level+1);
+                self.max_distance = self.max_distance.max(self.data.distance(child.data));
+            }
+        }
+    }
+
     fn remove_leaf(&mut self) -> Option<CoverTreeNode<D>> {
+        // let mut leaf: Option<CoverTreeNode<D>> = None;
+
+        // if self.children.is_some() && self.max_distance == 0f64 {
+        //     self.max_distance = 0f64;
+        //     leaf = Some(mem::replace(&mut self.children, None).expect("get children")
+        //                                                       .pop()
+        //                                                       .expect("pull last child"));
+        //     self.children = None;
+        //     return leaf
+        // }
+
         if let Some(ref mut children) = self.children {
             if let Some(index) = children.iter().position(|x| x.children.is_none()) {
                 return Some(children.remove(index));
             }
             for child in children {
                 let leaf = child.remove_leaf();
-                if leaf.is_some() {
-                    return leaf;
-                }
+                if leaf.is_some() {return leaf;}
             }
         }
         None
@@ -93,18 +120,17 @@ impl<D> CoverTreeNode<D> where D: CoverTreeData {
     //     return insert_(p, x)
     fn insert(mut self,
               data: D,
-              span_factor: f64) -> CoverTreeNode<D> {
-
-        if self.children.is_none() {
-            self.children = Some(vec![CoverTreeNode::new(data, self.level - 1)]);
-            return self;
-        }
+              span_factor: f64) ->CoverTreeNode<D> {
 
         if (&self.data).distance(data) > self.cover_distance(span_factor) {
             while (&self.data).distance(data) > self.cover_distance(span_factor) * 2f64 {
-                let mut leaf = self.remove_leaf().unwrap();
-                leaf.children = Some(vec![self]);
-                self = leaf;
+        
+                if let Some(mut leaf) = self.remove_leaf() {
+                    leaf.children = Some(vec![self]);
+                    self = leaf;
+                } else {
+                    break;
+                }
             }
             let mut root = CoverTreeNode::new(data, 0);
             root.children = Some(vec![self]);
@@ -125,80 +151,116 @@ impl<D> CoverTreeNode<D> where D: CoverTreeData {
     //     return p with x added as a child 
     fn insert_(&mut self,
                data: D,
-               span_factor: f64) {
+               span_factor: f64) -> bool {
+        let dist = self.data.distance(data);
 
-        assert!(&self.data.distance(data) <= &self.cover_distance(span_factor),
+        assert!(&dist <= &self.cover_distance(span_factor),
                 "CoverTree invariant violated: d(p,x) ≤ covdist(p)");  
         
+        if dist > self.max_distance { 
+            self.max_distance = dist; 
+        }
+        let raise = if self.level == 0 { 
+            self.level = 1; 
+            true 
+        } else { 
+            false 
+        };
+
         if let Some(ref mut children) = self.children {
-            for child in children.iter_mut() {
+            for child in &mut children.iter_mut() {
                 if child.data.distance(data) <= child.cover_distance(span_factor) {
-                    child.insert_(data, span_factor);
-                    return;
+                    return if child.insert_(data, span_factor) {
+                        self.level += 1;
+                        true
+                    } else {
+                        false
+                    };
                 }
             }
             children.push(CoverTreeNode::new(data, self.level - 1));
         } else {
             self.children = Some(vec![CoverTreeNode::new(data, self.level - 1)]);
         }
+        raise
+    }
+}
+
+
+pub struct CoverTree<D> where D: CoverTreeData {
+    root: Option<CoverTreeNode<D>>,
+    span_factor: f64,
+}
+
+impl<D> CoverTree<D> where D: CoverTreeData {
+    pub fn new() -> CoverTree<D> where D: PartialEq {
+        CoverTree {root: None,
+                   span_factor: 1.3}
+    }
+
+    pub fn from_items<T>(items: T)  
+                         -> CoverTree<D>
+                         where T: Iterator<Item=D> {
+
+        let mut tree = CoverTree::new();
+        tree.insert_all(items);
+        tree
+    }
+
+    pub fn insert_all<T>(&mut self, items: T) where T: Iterator<Item=D> {
+        for item in items {
+            self.insert(item);
+        }
+    }
+}
+
+impl<D> NearestNeighbor<D> for CoverTree<D> where D: CoverTreeData {
+    type Node = CoverTreeNode<D>;
+    
+    fn find_nearest<'a>(&'a mut self, query: D) -> Option<&'a D> {
+        if let Some(ref mut node) = self.root {
+            Some(node.find_nearest(query, None))
+        } else {
+            None
+        }
+    }
+
+    fn insert(&mut self, data: D) {
+        let temp = CoverTreeNode::new(data, 1);
+        if let Some(ref mut node) = self.root {
+            let n = mem::replace(node, temp);
+            mem::replace(node, n.insert(data, self.span_factor));
+            node.validate();
+        } else {
+            self.root = Some(temp);
+        }
     }
 }
 
 
 
-// pub struct CoverTree<D> where D: PartialEq {
-//     root: Option<CoverTreeNode<D>>,
-//     metric: Metric<D>,
-//     span_factor: f64,
-// }
 
-// impl<D> CoverTree<D> where D: PartialEq {
-//     pub fn new(metric: Metric<D>) -> CoverTree<D> where D: PartialEq {
-//         CoverTree {root: None, 
-//                    metric: metric, 
-//                    span_factor: 1.3}
-//     }
+impl<D> TreeDisplay for CoverTreeNode<D> where D: fmt::Display + CoverTreeData {
+    type Node = CoverTreeNode<D>;
+    fn node_string(&self) -> String {format!("{}", self)}
+    fn children(&self) -> Option<&Vec<Self>> {self.children.as_ref()}
+}
 
-//     pub fn from_items<T>(metric: Metric<D>, 
-//                          items: T)  
-//                          -> CoverTree<D>
-//                          where T: Iterator<Item=D> {
+impl<D> fmt::Display for CoverTreeNode<D> where D: fmt::Display + CoverTreeData {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, 
+               "L{}[{}]: {}", 
+               self.level,
+               self.max_distance,
+               self.data)
+    }
+}
 
-//         let mut tree = CoverTree {root: None, 
-//                                   metric: metric, 
-//                                   span_factor: 1.3};
-//         tree.insert_all(items);
-//         tree
-//     }
-
-//     pub fn insert_all<T>(&mut self, items: T) where T: Iterator<Item=D> {
-//         for item in items {
-//             self.insert(item);
-//         }
-//     }
-// }
-
-
-// impl<D> NearestNeighbor<D> for CoverTree<D> where D: PartialEq {
-//     type Node = CoverTreeNode<D>;
-    
-//     fn find_nearest<'a>(&'a self, query: &'a D) -> Option<&'a D> {
-//         if let Some(ref node) = self.root {
-//             Some(node.find_nearest(query, &node.data, self.metric))
-//         } else {
-//             None
-//         }
-//     }
-
-//     fn insert(&mut self, data: D) {
-//         if let Some(ref mut node) = self.root {
-//             node.insert(data, self.metric, self.span_factor);
-//             return;
-//         }
-//         self.root = Some(CoverTreeNode::new(data, 0));
-//     }
-
-//     fn distance(&self, a: &D, b: &D) -> f64 {
-//         (self.metric)(a, b)
-//     }
-// }
+impl<D> CoverTree<D> where D: CoverTreeData + fmt::Display {
+    pub fn tree_string(&self) -> String { 
+        match self.root {
+            Some(ref root) => root.tree_string(),
+            None => "EMPTY".to_string()
+        }
+    }
+}
