@@ -44,7 +44,7 @@ fn main() {
 
     ct.insert(5f64);
     println!("{}\n", ct.tree_string());
-    ct.insert(15f64);
+    ct.insert(6f64);
     println!("{}\n", ct.tree_string());
     ct.insert(16f64);
     println!("{}\n", ct.tree_string());

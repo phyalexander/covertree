@@ -3,7 +3,6 @@ use super::common::{NearestNeighbor, Metric, CoverTreeData};
 use treedisplay::TreeDisplay;
 use std::fmt;
 use std::mem;
-use std::cmp;
 
 pub struct CoverTreeNode<D> where D: CoverTreeData {
     /// The data stored in the node.
@@ -30,9 +29,186 @@ impl<D> CoverTreeNode<D> where D: CoverTreeData {
         span_factor.powf(self.level as f64)
     }
 
-    // fn seperation_distance(&self, span_factor: f64) -> f64 {
-    //     span_factor.powf((self.level - 1) as f64)
-    // }
+    #[allow(dead_code)]
+    fn seperation_distance(&self, span_factor: f64) -> f64 {
+        span_factor.powf((self.level - 1) as f64)
+    }
+
+    #[allow(dead_code)]
+    fn descendents(&self) -> Vec<&CoverTreeNode<D>> {
+        let mut descendents: Vec<&CoverTreeNode<D>> = Vec::new();
+        if let Some(ref children) = self.children {
+            for child in children {
+                descendents.push(&child);
+                for desc in child.descendents() {
+                    descendents.push(desc);
+                }
+            }
+        }
+        descendents
+    }
+
+    #[allow(dead_code)]
+    fn max_distance(&self) -> f64 {
+        let mut dist = 0f64;
+        for descendent in self.descendents() {
+            dist = self.data
+                       .distance(descendent.data)
+                       .max(dist);
+        }
+        dist
+    }
+
+    fn add_child(&mut self, node: CoverTreeNode<D>) {
+        match self.children {
+            None => self.children = Some(vec![node]),
+            Some(ref mut children) => children.push(node)
+        }
+    }
+
+    fn set_levels(&mut self, level: usize) {
+        assert!(level >= 1, "CoverTree invariant violated: level >= 1");
+
+        self.level = level;
+        if let Some(ref mut children) = self.children {
+            for child in children {
+                if child.level != level -1 {
+                    child.set_levels(level-1);
+                }
+            }
+        }
+    }
+
+    // Remove any leaf q from p
+    // p′ ← tree with root q and p as only child
+    // p ← p′
+    fn promote_leaf(&mut self) {
+        if self.children.is_none() {return;}
+
+        if let Some(leaf) = self.remove_leaf() {
+            let old_root = mem::replace(self, leaf);
+            self.add_child(old_root);
+        }
+    }
+
+    fn remove_leaf(&mut self) -> Option<CoverTreeNode<D>> {
+        let mut leaf = None;
+        let mut was_last = false;
+        if let Some(ref mut children) = self.children {
+            // Find index of leaf.
+            if let Some(index) = children
+                                   .iter()
+                                   .position(|x| x.children.is_none()) {
+                // Remove leaf and set was_last flag if needed.
+                leaf = Some(children.swap_remove(index));
+                if children.len() == 0 {was_last = true;}
+            } else {
+                // There are no leaves at this level, so recurse.
+                leaf = children
+                         .first_mut()
+                         .expect("get first child")
+                         .remove_leaf();
+            }
+        }
+        if was_last {self.children = None;} // Erase empty vec.
+        leaf
+    }
+
+    // Pseudocode from paper:
+    // function insert(cover tree p, data point x) 
+    //     if d(p, x) > covdist(p) then
+    //         while d(p, x) > 2*covdist(p) do
+    //             Remove any leaf q from p
+    //             p′ ← tree with root q and p as only child
+    //             p ← p′
+    //         return tree with x as root and p as only child
+    //     return insert_(p, x)
+    fn insert(mut self,
+              data: D,
+              span_factor: f64) ->CoverTreeNode<D> {
+        let level = self.level;
+        if (&self.data).distance(data) > self.cover_distance(span_factor) {
+            while (&self.data).distance(data) > self.cover_distance(span_factor) * 2f64 {
+                self.promote_leaf();
+                self.set_levels(level);
+            }
+            let mut root = CoverTreeNode::new(data, level + 1);
+            root.children = Some(vec![self]);
+            return root;
+        }
+        //         if let Some(mut leaf) = self.remove_leaf() {
+        //             leaf.children = Some(vec![self]);
+        //             self = leaf;
+        //             self.set_levels(level);
+
+        //         } else {
+        //             break;
+        //         }
+        //     }
+        //     let mut root = CoverTreeNode::new(data, 0);
+        //     root.children = Some(vec![self]);
+        //     return root;
+
+        self.insert_(data, span_factor)
+    }
+
+    // Pseudocode from paper:
+    // function insert_(cover tree p, data point x)
+    //     prerequisites: d(p,x) ≤ covdist(p)
+    //     for q ∈ children(p) do
+    //          if d(q, x) ≤ covdist(q) then
+    //              q′ ← insert_(q, x)
+    //              p′ ← p with child q replaced with q′
+    //              return p′
+    //     return p with x added as a child 
+    fn insert_(mut self,
+               data: D,
+               span_factor: f64) -> CoverTreeNode<D> {
+        
+        // Verify that the node can be inserted here.
+        let dist = self.data.distance(data);
+        let covdist = self.cover_distance(span_factor);
+        assert!(dist <= covdist,
+                "CoverTree invariant violated: d(p,x) ≤ covdist(p)"); 
+
+        // Cache the maximum distance for this node.
+        // self.max_distance = self.max_distance.max(dist);
+
+        let mut child_level = 0;
+        let mut done = false;
+        if let Some(ref mut children) = self.children {
+            for child in children {
+                let dummy = CoverTreeNode::new(data, 0); // Placeholder data.
+                if child.data.distance(data) <= child.cover_distance(span_factor) {
+
+                    // Gain ownership over child and insert data.
+                    let child_new = mem::replace(child, dummy)
+                                      .insert_(data, span_factor);
+                    child_level = child_new.level;
+
+                    // Restore child to where it was.
+                    mem::replace(child, child_new);
+
+                    // We want to return self, but we've borrowed children, 
+                    // so we just set a flag and break instead.
+                    done = true;
+                    break;
+                }
+            }
+        }
+        if !done {
+            // No children: just add the one we've got.
+            if self.level == 1 {self.level += 1;}
+            let new_node = CoverTreeNode::new(data, self.level-1);
+            self.add_child(new_node);
+        }
+
+        // Correct levels
+        if child_level >= self.level {
+            self.set_levels(child_level + 1);
+        }
+        self
+    }
 
     // Pseudocode from paper:
     // function findNearestNeighbor(cover tree p, 
@@ -57,8 +233,6 @@ impl<D> CoverTreeNode<D> where D: CoverTreeData {
             nearest_yet.expect("provided is nearest yet")
         };
 
-
-
         if let Some(ref mut children) = self.children {
             children.sort_by(|a: &CoverTreeNode<D>, 
                               b: &CoverTreeNode<D>| a.data.distance(query)
@@ -71,118 +245,6 @@ impl<D> CoverTreeNode<D> where D: CoverTreeData {
             }
         }
         &nearest
-    }
-
-    fn validate(&mut self) {
-        self.max_distance = 0f64;
-        self.level = 0;
-        if let Some(ref mut children) = self.children {
-            for child in children {
-                child.validate();
-                self.level = cmp::max(self.level, child.level+1);
-                self.max_distance = self.max_distance.max(self.data.distance(child.data));
-            }
-        }
-    }
-
-    fn remove_leaf(&mut self) -> Option<CoverTreeNode<D>> {
-        // let mut leaf: Option<CoverTreeNode<D>> = None;
-
-        // if self.children.is_some() && self.max_distance == 0f64 {
-        //     self.max_distance = 0f64;
-        //     leaf = Some(mem::replace(&mut self.children, None).expect("get children")
-        //                                                       .pop()
-        //                                                       .expect("pull last child"));
-        //     self.children = None;
-        //     return leaf
-        // }
-
-        if let Some(ref mut children) = self.children {
-            if let Some(index) = children.iter().position(|x| x.children.is_none()) {
-                return Some(children.remove(index));
-            }
-            for child in children {
-                let leaf = child.remove_leaf();
-                if leaf.is_some() {return leaf;}
-            }
-        }
-        None
-    }
-
-    // Pseudocode from paper:
-    // function insert(cover tree p, data point x) 
-    //     if d(p, x) > covdist(p) then
-    //         while d(p, x) > 2*covdist(p) do
-    //             Remove any leaf q from p
-    //             p′ ← tree with root q and p as only child
-    //             p ← p′
-    //         return tree with x as root and p as only child
-    //     return insert_(p, x)
-    fn insert(mut self,
-              data: D,
-              span_factor: f64) ->CoverTreeNode<D> {
-
-        if (&self.data).distance(data) > self.cover_distance(span_factor) {
-            while (&self.data).distance(data) > self.cover_distance(span_factor) * 2f64 {
-        
-                if let Some(mut leaf) = self.remove_leaf() {
-                    leaf.children = Some(vec![self]);
-                    self = leaf;
-                } else {
-                    break;
-                }
-            }
-            let mut root = CoverTreeNode::new(data, 0);
-            root.children = Some(vec![self]);
-            return root;
-        }
-        self.insert_(data, span_factor);
-        return self;
-    }
-
-    // Pseudocode from paper:
-    // function insert_(cover tree p, data point x)
-    //     prerequisites: d(p,x) ≤ covdist(p)
-    //     for q ∈ children(p) do
-    //          if d(q, x) ≤ covdist(q) then
-    //              q′ ← insert_(q, x)
-    //              p′ ← p with child q replaced with q′
-    //              return p′
-    //     return p with x added as a child 
-    fn insert_(&mut self,
-               data: D,
-               span_factor: f64) -> bool {
-        let dist = self.data.distance(data);
-
-        assert!(&dist <= &self.cover_distance(span_factor),
-                "CoverTree invariant violated: d(p,x) ≤ covdist(p)");  
-        
-        if dist > self.max_distance { 
-            self.max_distance = dist; 
-        }
-        let raise = if self.level == 0 { 
-            self.level = 1; 
-            true 
-        } else { 
-            false 
-        };
-
-        if let Some(ref mut children) = self.children {
-            for child in &mut children.iter_mut() {
-                if child.data.distance(data) <= child.cover_distance(span_factor) {
-                    return if child.insert_(data, span_factor) {
-                        self.level += 1;
-                        true
-                    } else {
-                        false
-                    };
-                }
-            }
-            children.push(CoverTreeNode::new(data, self.level - 1));
-        } else {
-            self.children = Some(vec![CoverTreeNode::new(data, self.level - 1)]);
-        }
-        raise
     }
 }
 
@@ -230,7 +292,6 @@ impl<D> NearestNeighbor<D> for CoverTree<D> where D: CoverTreeData {
         if let Some(ref mut node) = self.root {
             let n = mem::replace(node, temp);
             mem::replace(node, n.insert(data, self.span_factor));
-            node.validate();
         } else {
             self.root = Some(temp);
         }
