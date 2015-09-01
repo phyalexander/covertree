@@ -126,11 +126,12 @@ impl<D> CoverTreeNode<D> where D: CoverTreeData {
     fn insert(mut self,
               data: D,
               span_factor: f64) ->CoverTreeNode<D> {
-        let level = self.level;
+        let mut level = self.level;
         if (&self.data).distance(data) > self.cover_distance(span_factor) {
             while (&self.data).distance(data) > self.cover_distance(span_factor) * 2f64 {
                 self.promote_leaf();
-                self.set_levels(level);
+                level += 1;
+                self.level = level;
             }
             let mut root = CoverTreeNode::new(data, level + 1);
             root.children = Some(vec![self]);
@@ -239,7 +240,7 @@ impl<D> CoverTreeNode<D> where D: CoverTreeData {
                                                           .partial_cmp(&b.data.distance(query))
                                                           .expect("sort by distance to target"));
             for child in children {
-                if nearest.distance(query) > nearest.distance(child.data) - child.max_distance {
+                if nearest.distance(query) > nearest.distance(child.data) - child.max_distance() {
                     nearest = child.find_nearest(query, Some(&nearest));
                 }
             }
@@ -312,7 +313,7 @@ impl<D> fmt::Display for CoverTreeNode<D> where D: fmt::Display + CoverTreeData 
         write!(f, 
                "L{}[{}]: {}", 
                self.level,
-               self.max_distance,
+               self.max_distance(),
                self.data)
     }
 }
