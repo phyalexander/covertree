@@ -13,6 +13,7 @@ pub struct CoverTreeNode<D> where D: CoverTreeData {
     /// The level of the node.
     level: usize,
     /// The maximum distance from this node to any of its descendents.
+    #[allow(dead_code)]
     max_distance: f64
 }
 
@@ -66,19 +67,6 @@ impl<D> CoverTreeNode<D> where D: CoverTreeData {
         }
     }
 
-    fn set_levels(&mut self, level: usize) {
-        assert!(level >= 1, "CoverTree invariant violated: level >= 1");
-
-        self.level = level;
-        if let Some(ref mut children) = self.children {
-            for child in children {
-                if child.level != level -1 {
-                    child.set_levels(level-1);
-                }
-            }
-        }
-    }
-
     // Remove any leaf q from p
     // p′ ← tree with root q and p as only child
     // p ← p′
@@ -127,8 +115,8 @@ impl<D> CoverTreeNode<D> where D: CoverTreeData {
               data: D,
               span_factor: f64) ->CoverTreeNode<D> {
         let mut level = self.level;
-        if (&self.data).distance(data) > self.cover_distance(span_factor) {
-            while (&self.data).distance(data) > self.cover_distance(span_factor) * 2f64 {
+        if self.data.distance(data) > self.cover_distance(span_factor) {
+            while self.data.distance(data) > self.cover_distance(span_factor) * 2.0 {
                 self.promote_leaf();
                 level += 1;
                 self.level = level;
@@ -137,18 +125,6 @@ impl<D> CoverTreeNode<D> where D: CoverTreeData {
             root.children = Some(vec![self]);
             return root;
         }
-        //         if let Some(mut leaf) = self.remove_leaf() {
-        //             leaf.children = Some(vec![self]);
-        //             self = leaf;
-        //             self.set_levels(level);
-
-        //         } else {
-        //             break;
-        //         }
-        //     }
-        //     let mut root = CoverTreeNode::new(data, 0);
-        //     root.children = Some(vec![self]);
-        //     return root;
 
         self.insert_(data, span_factor)
     }
@@ -174,8 +150,6 @@ impl<D> CoverTreeNode<D> where D: CoverTreeData {
 
         // Cache the maximum distance for this node.
         // self.max_distance = self.max_distance.max(dist);
-
-        let mut child_level = 0;
         let mut done = false;
         if let Some(ref mut children) = self.children {
             for child in children {
@@ -185,7 +159,6 @@ impl<D> CoverTreeNode<D> where D: CoverTreeData {
                     // Gain ownership over child and insert data.
                     let child_new = mem::replace(child, dummy)
                                       .insert_(data, span_factor);
-                    child_level = child_new.level;
 
                     // Restore child to where it was.
                     mem::replace(child, child_new);
@@ -202,11 +175,6 @@ impl<D> CoverTreeNode<D> where D: CoverTreeData {
             if self.level == 1 {self.level += 1;}
             let new_node = CoverTreeNode::new(data, self.level-1);
             self.add_child(new_node);
-        }
-
-        // Correct levels
-        if child_level >= self.level {
-            self.set_levels(child_level + 1);
         }
         self
     }
@@ -227,8 +195,8 @@ impl<D> CoverTreeNode<D> where D: CoverTreeData {
                         -> &'a D {
 
         let mut nearest = if nearest_yet.is_none() ||
-                             &self.data.distance(query) < &nearest_yet.expect("data is nearest yet")
-                                                                      .distance(query) { 
+                             self.data.distance(query) < nearest_yet.expect("data is nearest yet")
+                                                                    .distance(query) { 
             &self.data 
         } else {
             nearest_yet.expect("provided is nearest yet")
@@ -239,13 +207,14 @@ impl<D> CoverTreeNode<D> where D: CoverTreeData {
                               b: &CoverTreeNode<D>| a.data.distance(query)
                                                           .partial_cmp(&b.data.distance(query))
                                                           .expect("sort by distance to target"));
+            
             for child in children {
                 if nearest.distance(query) > nearest.distance(child.data) - child.max_distance() {
                     nearest = child.find_nearest(query, Some(&nearest));
                 }
             }
         }
-        &nearest
+        nearest
     }
 }
 
@@ -279,7 +248,7 @@ impl<D> CoverTree<D> where D: CoverTreeData {
 
 impl<D> NearestNeighbor<D> for CoverTree<D> where D: CoverTreeData {
     type Node = CoverTreeNode<D>;
-    
+
     fn find_nearest<'a>(&'a mut self, query: D) -> Option<&'a D> {
         if let Some(ref mut node) = self.root {
             Some(node.find_nearest(query, None))

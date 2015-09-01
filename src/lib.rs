@@ -40,10 +40,28 @@ fn test_simple_cover_tree() {
     use common::NearestNeighbor;
     let mut ct: CoverTree<TreeItem> = CoverTree::new();
 
-    ct.insert(5f64);
-    ct.insert(8f64);
-    ct.insert(15f64);
+    let data: &[f64; 12] = &[
+        1.0, 
+        10.0, 
+        100.0, 
+        122.0, 
+        123.0, 
+        144.0, 
+        20.0, 
+        25.0, 
+        35.0, 
+        78.0, 
+        89.0,
+        90.0 
+    ];
+    for point in data.iter() {
+        ct.insert(*point);
+    }
 
-    assert_eq!(ct.find_nearest(10f64), Some(&8f64));
+    assert_eq!(ct.find_nearest(10.0), Some(&10.0));
+    assert_eq!(ct.find_nearest(94.0), Some(&90.0));
+    assert_eq!(ct.find_nearest(80.0), Some(&78.0));
+    assert_eq!(ct.find_nearest(3.0), Some(&1.0));
+    assert_eq!(ct.find_nearest(121.0), Some(&122.0));
 }
 
