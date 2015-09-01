@@ -35,7 +35,6 @@ impl<D> CoverTreeNode<D> where D: CoverTreeData {
         span_factor.powf((self.level - 1) as f64)
     }
 
-    #[allow(dead_code)]
     fn descendents(&self) -> Vec<&CoverTreeNode<D>> {
         let mut descendents: Vec<&CoverTreeNode<D>> = Vec::new();
         if let Some(ref children) = self.children {
@@ -49,7 +48,6 @@ impl<D> CoverTreeNode<D> where D: CoverTreeData {
         descendents
     }
 
-    #[allow(dead_code)]
     fn max_distance(&self) -> f64 {
         let mut dist = 0f64;
         for descendent in self.descendents() {
@@ -186,14 +184,15 @@ impl<D> CoverTreeNode<D> where D: CoverTreeData {
     //     if d(p, x) < d(y, x) then
     //         y←p
     //     for each child q of p sorted by distance to x do
-    //         if d(y, x) > d(y, q) − maxdist(q) then
+    //         if d(y, x) > d(x, q) − maxdist(q) then
     //             y ← findNearestNeighbor(q, x, y)
     //     return y 
     fn find_nearest<'a>(&'a mut self, 
                         query: D,
                         nearest_yet: Option<&'a D>) 
                         -> &'a D {
-
+        
+        // Save closes value yet seen.
         let mut nearest = if nearest_yet.is_none() ||
                              self.data.distance(query) < nearest_yet.expect("data is nearest yet")
                                                                     .distance(query) { 
@@ -203,13 +202,15 @@ impl<D> CoverTreeNode<D> where D: CoverTreeData {
         };
 
         if let Some(ref mut children) = self.children {
+            // Sort children by distance to query point.
             children.sort_by(|a: &CoverTreeNode<D>, 
                               b: &CoverTreeNode<D>| a.data.distance(query)
                                                           .partial_cmp(&b.data.distance(query))
                                                           .expect("sort by distance to target"));
             
             for child in children {
-                if nearest.distance(query) > nearest.distance(child.data) - child.max_distance() {
+                // If closer points could be below this one, recurse.
+                if nearest.distance(query) > query.distance(child.data) - child.max_distance() {
                     nearest = child.find_nearest(query, Some(&nearest));
                 }
             }
