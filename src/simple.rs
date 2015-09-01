@@ -13,8 +13,7 @@ pub struct CoverTreeNode<D> where D: CoverTreeData {
     /// The level of the node.
     level: usize,
     /// The maximum distance from this node to any of its descendents.
-    #[allow(dead_code)]
-    max_distance: f64
+    max_distance: Option<f64>
 }
 
 impl<D> CoverTreeNode<D> where D: CoverTreeData {
@@ -23,16 +22,11 @@ impl<D> CoverTreeNode<D> where D: CoverTreeData {
         CoverTreeNode {data:data, 
                        children: None, 
                        level: level,
-                       max_distance: 0.0}
+                       max_distance: None}
     }
 
     fn cover_distance(&self, span_factor: f64) -> f64 {
         span_factor.powf(self.level as f64)
-    }
-
-    #[allow(dead_code)]
-    fn seperation_distance(&self, span_factor: f64) -> f64 {
-        span_factor.powf((self.level - 1) as f64)
     }
 
     fn descendents(&self) -> Vec<&CoverTreeNode<D>> {
@@ -49,13 +43,23 @@ impl<D> CoverTreeNode<D> where D: CoverTreeData {
     }
 
     fn max_distance(&self) -> f64 {
-        let mut dist = 0f64;
+        let mut dist = 0.0;
         for descendent in self.descendents() {
             dist = self.data
                        .distance(descendent.data)
                        .max(dist);
         }
         dist
+    }
+
+    fn max_distance_cached(&mut self) -> f64 {
+        if let Some(dist) = self.max_distance {
+            dist
+        } else {
+            let dist = self.max_distance();
+            self.max_distance = Some(dist);
+            dist
+        }
     }
 
     fn add_child(&mut self, node: CoverTreeNode<D>) {
@@ -69,10 +73,11 @@ impl<D> CoverTreeNode<D> where D: CoverTreeData {
     // p′ ← tree with root q and p as only child
     // p ← p′
     fn promote_leaf(&mut self) {
-        if self.children.is_none() {return;}
-
-        if let Some(leaf) = self.remove_leaf() {
+        if self.children.is_none() {
+            self.level += 1;
+        } else if let Some(leaf) = self.remove_leaf() {
             let old_root = mem::replace(self, leaf);
+            self.level = old_root.level + 1;
             self.add_child(old_root);
         }
     }
@@ -96,7 +101,7 @@ impl<D> CoverTreeNode<D> where D: CoverTreeData {
                          .remove_leaf();
             }
         }
-        if was_last {self.children = None;} // Erase empty vec.
+        if was_last {self.children = None;} // Erase empty Vec.
         leaf
     }
 
@@ -112,14 +117,15 @@ impl<D> CoverTreeNode<D> where D: CoverTreeData {
     fn insert(mut self,
               data: D,
               span_factor: f64) ->CoverTreeNode<D> {
-        let mut level = self.level;
+
+        // Cache the maximum distance for this node.
+        self.max_distance.map(|x| x.max(self.data.distance(data)));
+
         if self.data.distance(data) > self.cover_distance(span_factor) {
             while self.data.distance(data) > self.cover_distance(span_factor) * 2.0 {
                 self.promote_leaf();
-                level += 1;
-                self.level = level;
             }
-            let mut root = CoverTreeNode::new(data, level + 1);
+            let mut root = CoverTreeNode::new(data, self.level + 1);
             root.children = Some(vec![self]);
             return root;
         }
@@ -147,7 +153,8 @@ impl<D> CoverTreeNode<D> where D: CoverTreeData {
                 "CoverTree invariant violated: d(p,x) ≤ covdist(p)"); 
 
         // Cache the maximum distance for this node.
-        // self.max_distance = self.max_distance.max(dist);
+        self.max_distance.map(|x| x.max(self.data.distance(data)));
+
         let mut done = false;
         if let Some(ref mut children) = self.children {
             for child in children {
@@ -210,7 +217,7 @@ impl<D> CoverTreeNode<D> where D: CoverTreeData {
             
             for child in children {
                 // If closer points could be below this one, recurse.
-                if nearest.distance(query) > query.distance(child.data) - child.max_distance() {
+                if nearest.distance(query) > query.distance(child.data) - child.max_distance_cached() {
                     nearest = child.find_nearest(query, Some(&nearest));
                 }
             }
