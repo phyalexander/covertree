@@ -33,7 +33,7 @@ fn main() {
         ct.insert(*point);
     }
     println!("{}\n", ct.tree_string());
-
+    ct.remove(91.0).ok();
 
     println!("Nearest to 66: {}", ct.find_nearest(66.0).unwrap());
     println!("Nearest to 93: {}", ct.find_nearest(93.0).unwrap());

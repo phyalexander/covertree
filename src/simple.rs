@@ -234,8 +234,8 @@ impl<D> CoverTreeNode<D> where D: CoverTreeData {
         nearest
     }
 
-    fn remove(&mut self, query: D) -> Option<D> {
-        let mut removed = None;
+    fn remove(&mut self, query: D) -> Result<D, String> {
+        let mut removed = Err("Item not found".to_string());
         let mut was_last = false;
 
         if let Some(ref mut children) = self.children {
@@ -249,17 +249,17 @@ impl<D> CoverTreeNode<D> where D: CoverTreeData {
                                    .iter()
                                    .position(|x| x.data == query) {
                 // Remove leaf and set was_last flag if needed.
-                removed = Some(children.swap_remove(index).data);
+                removed = Ok(children.swap_remove(index).data);
                 if children.len() == 0 {was_last = true;}
             } else {
                 for child in children {
                     removed = child.remove(query);
-                    if removed.is_some() {break;}
+                    if removed.is_ok() {break;}
                 }
             }
         }
         if was_last {self.children = None;} // Erase empty Vec.
-        if removed.is_some() {self.max_distance = None;} // Clear cache.
+        if removed.is_ok() {self.max_distance = None;} // Clear cache.
         removed
     }
 }
@@ -294,17 +294,17 @@ impl<D> CoverTree<D> where D: CoverTreeData {
         }
     }
 
-    pub fn remove(&mut self, data: D) -> Option<D> {
+    pub fn remove(&mut self, data: D) -> Result<D, String> {
         if let Some(ref mut node) = self.root {
             node.remove(data)
         } else {
-            None
+            Err("Item not found".to_string())
         }
     }
 
     pub fn remove_all<T>(&mut self, items: T) where T: Iterator<Item=D> {
         for item in items {
-            self.remove(item);
+            self.remove(item).ok();
         }
     }
 }
