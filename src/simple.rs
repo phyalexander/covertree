@@ -268,15 +268,24 @@ impl<D> CoverTreeNode<D> where D: CoverTreeData {
 // CoverTree
 ////////////////////////////////////////////////////////////////////////////////
 
+/// A Cover Tree containing data of type D.
+/// 
+/// The data must implement CoverTreeData which provides a metric, 
+/// a partial order, and Copy. 
 pub struct CoverTree<D> where D: CoverTreeData {
+    /// The root of the tree.
     root: Option<CoverTreeNode<D>>,
+    /// The span factor for each node.
     span_factor: f64,
+    /// The number of items in the tree.
+    count: usize
 }
 
 impl<D> CoverTree<D> where D: CoverTreeData {
     pub fn new() -> CoverTree<D> where D: PartialEq {
         CoverTree {root: None,
-                   span_factor: 1.3}
+                   span_factor: 1.3,
+                   count: 0}
     }
 
     pub fn from_items<T>(items: T)  
@@ -294,14 +303,6 @@ impl<D> CoverTree<D> where D: CoverTreeData {
         }
     }
 
-    pub fn remove(&mut self, data: D) -> Result<D, String> {
-        if let Some(ref mut node) = self.root {
-            node.remove(data)
-        } else {
-            Err("Item not found".to_string())
-        }
-    }
-
     pub fn remove_all<T>(&mut self, items: T) where T: Iterator<Item=D> {
         for item in items {
             self.remove(item).ok();
@@ -311,6 +312,8 @@ impl<D> CoverTree<D> where D: CoverTreeData {
 
 impl<D> NearestNeighbor<D> for CoverTree<D> where D: CoverTreeData {
     type Node = CoverTreeNode<D>;
+
+    fn count(&self) -> usize {self.count}
 
     fn find_nearest<'a>(&'a mut self, query: D) -> Option<&'a D> {
         if let Some(ref mut node) = self.root {
@@ -327,6 +330,17 @@ impl<D> NearestNeighbor<D> for CoverTree<D> where D: CoverTreeData {
             mem::replace(node, n.insert(data, self.span_factor));
         } else {
             self.root = Some(temp);
+        }
+        self.count += 1;
+    }
+
+    fn remove(&mut self, data: D) -> Result<D, String> {
+        if let Some(ref mut node) = self.root {
+            let removed = node.remove(data);
+            if removed.is_ok() {self.count -= 1;}
+            removed
+        } else {
+            Err("Item not found".to_string())
         }
     }
 }

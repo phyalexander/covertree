@@ -34,11 +34,13 @@ mod tests {
     #[test]
     fn test_empty_tree() {
         let ct: CoverTree<MetricF64> = CoverTree::new();
+        assert_eq!(ct.count(), 0);
     }
 
     #[test]
     fn test_from_items() {
         let ct: CoverTree<MetricF64> = CoverTree::from_items(test_f64_data().into_iter());
+        assert_eq!(ct.count(), test_f64_data().len());
     }
 
     #[test]
@@ -50,5 +52,6 @@ mod tests {
         for point in data.iter() {
             ct.insert(*point);
         }
+        assert_eq!(ct.count(), test_f64_data().len());
     }
 }
