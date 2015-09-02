@@ -1,9 +1,18 @@
 
-use super::common::{NearestNeighbor, Metric, CoverTreeData};
+use common::{NearestNeighbor, CoverTreeData};
+use metric::Metric;
 use treedisplay::TreeDisplay;
 use std::fmt;
 use std::mem;
 
+////////////////////////////////////////////////////////////////////////////////
+// CoverTreeNode
+////////////////////////////////////////////////////////////////////////////////
+
+/// A Cover Tree node containing data of type D.
+/// 
+/// The node data must implement CoverTreeData which provides a metric, 
+/// a partial order, and Copy. 
 pub struct CoverTreeNode<D> where D: CoverTreeData {
     /// The data stored in the node.
     data: D,
@@ -246,7 +255,6 @@ impl<D> CoverTreeNode<D> where D: CoverTreeData {
                 for child in children {
                     removed = child.remove(query);
                     if removed.is_some() {break;}
-
                 }
             }
         }
@@ -256,6 +264,9 @@ impl<D> CoverTreeNode<D> where D: CoverTreeData {
     }
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// CoverTree
+////////////////////////////////////////////////////////////////////////////////
 
 pub struct CoverTree<D> where D: CoverTreeData {
     root: Option<CoverTreeNode<D>>,
@@ -321,7 +332,9 @@ impl<D> NearestNeighbor<D> for CoverTree<D> where D: CoverTreeData {
 }
 
 
-
+////////////////////////////////////////////////////////////////////////////////
+// Debug display trait
+////////////////////////////////////////////////////////////////////////////////
 
 impl<D> TreeDisplay for CoverTreeNode<D> where D: fmt::Display + CoverTreeData {
     type Node = CoverTreeNode<D>;

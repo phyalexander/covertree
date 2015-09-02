@@ -2,43 +2,45 @@
 extern crate num;
 extern crate treedisplay;
 
+pub mod metric;
 pub mod common;
 pub mod simple;
 
-type TreeItem = f64;
+// type TreeItem = f64;
 
-impl common::Metric<f64> for TreeItem {
-    fn distance(self, rhs: f64) -> f64 {
-        (rhs - self).abs() as f64
-    }
-}
+// impl common::Metric<f64> for TreeItem {
+//     fn distance(self, rhs: f64) -> f64 {
+//         (rhs - self).abs() as f64
+//     }
+// }
 
-impl<'a> common::Metric<f64> for &'a TreeItem {
-    fn distance(self, rhs: f64) -> f64 {
-        (rhs - self).abs() as f64
-    }
-}
+// impl<'a> common::Metric<f64> for &'a TreeItem {
+//     fn distance(self, rhs: f64) -> f64 {
+//         (rhs - self).abs() as f64
+//     }
+// }
 
-impl<'b> common::Metric<&'b f64> for TreeItem {
-    fn distance(self, rhs: &'b f64) -> f64 {
-        (rhs - self).abs() as f64
-    }
-}
+// impl<'b> common::Metric<&'b f64> for TreeItem {
+//     fn distance(self, rhs: &'b f64) -> f64 {
+//         (rhs - self).abs() as f64
+//     }
+// }
 
-impl<'a, 'b> common::Metric<&'b f64> for &'a TreeItem {
+// impl<'a, 'b> common::Metric<&'b f64> for &'a TreeItem {
 
-    fn distance(self, rhs:&'b f64) -> f64 {
-        (rhs - self).abs() as f64
-    }
-}
+//     fn distance(self, rhs:&'b f64) -> f64 {
+//         (rhs - self).abs() as f64
+//     }
+// }
 
-impl common::CoverTreeData for TreeItem {}
+
 
 #[test]
 fn test_simple_cover_tree() {
+    use metric::MetricF64;
     use simple::CoverTree;
     use common::NearestNeighbor;
-    let mut ct: CoverTree<TreeItem> = CoverTree::new();
+    let mut ct: CoverTree<MetricF64> = CoverTree::new();
 
     let data: &[f64; 12] = &[
         1.0, 

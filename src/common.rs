@@ -1,5 +1,7 @@
 
-pub trait NearestNeighbor<D> where D: Metric {
+use metric;
+
+pub trait NearestNeighbor<D> where D: metric::Metric {
 	type Node;
 	
 	fn find_nearest<'a>(&'a mut self, query: D) -> Option<&'a D>;
@@ -7,8 +9,6 @@ pub trait NearestNeighbor<D> where D: Metric {
 }
 
 
-pub trait CoverTreeData: Metric + PartialEq + PartialOrd + Copy {}
+pub trait CoverTreeData: metric::Metric + PartialEq + PartialOrd + Copy {}
 
-pub trait Metric<RHS=Self> {
-	fn distance(self, rhs: RHS) -> f64;
-}
+impl CoverTreeData for metric::MetricF64 {}
