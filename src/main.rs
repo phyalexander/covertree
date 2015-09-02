@@ -10,7 +10,7 @@ use common::NearestNeighbor;
 use treedisplay::TreeDisplay;
 
 
-#[allow(dead_code)]
+#[cfg_attr(test, allow(dead_code))]
 fn main() {
 
     let mut ct: CoverTree<metric::MetricF64> = CoverTree::new();

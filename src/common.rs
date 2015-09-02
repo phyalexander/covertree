@@ -11,4 +11,8 @@ pub trait NearestNeighbor<D> where D: metric::Metric {
 
 pub trait CoverTreeData: metric::Metric + PartialEq + PartialOrd + Copy {}
 
+
+impl CoverTreeData for metric::MetricI32 {}
+impl CoverTreeData for metric::MetricI64 {}
+impl CoverTreeData for metric::MetricF32 {}
 impl CoverTreeData for metric::MetricF64 {}

@@ -7,6 +7,8 @@ pub mod common;
 pub mod simple;
 
 
+
+
 #[test]
 fn test_simple_cover_tree() {
     use metric::MetricF64;

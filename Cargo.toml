@@ -7,4 +7,4 @@ authors = ["Skylor R Schermer <skyschermer@gmail.com>"]
 num = "*"
 
 [dependencies.treedisplay]
-path = "../treedisplay-rs"
+path = "../treeutils-rs"
