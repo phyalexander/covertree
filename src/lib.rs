@@ -11,6 +11,7 @@ pub mod simple;
 #[cfg(test)]
 mod tests {
     use metric::MetricF64;
+    use metric::MetricI64;
     use simple::CoverTree;
     use common::NearestNeighbor;
 
@@ -28,6 +29,17 @@ mod tests {
             78.0, 
             89.0,
             90.0
+        ]
+    }
+
+    fn test_i64_data() -> Vec<i64> {
+        vec![
+            18, 28, 5, 7303, 7430, 910, 1200, 190, 12, 
+            512, 1002, 188, 134, 70, 8309, 23, 1003, 39, 
+            89, 257, 72, 7, 15, 103, 2, 3134, 315, 95, 
+            112, 26, 212, 369, 731, 100, 90, 60, 1, 3462, 
+            9, 456, 91, 13, 699, 165, 301, 856, 17, 709, 
+            634, 800, 619, 2778, -12, 4555, -89, 0, -60
         ]
     }
 
@@ -56,7 +68,7 @@ mod tests {
     }
 
     #[test]
-    fn nearest_neighbor() {
+    fn nearest_neighbor_f64() {
         let mut ct: CoverTree<MetricF64> = CoverTree::from_items(test_f64_data().into_iter());
 
         assert_eq!(ct.find_nearest(0.0).unwrap(), &1.0);
@@ -68,5 +80,12 @@ mod tests {
         assert_eq!(ct.find_nearest(91.0).unwrap(), &90.0);
         assert_eq!(ct.find_nearest(-91.0).unwrap(), &1.0);
         assert_eq!(ct.find_nearest(1000.0).unwrap(), &144.0);
+    }
+
+    #[test]
+    fn nearest_neighbor_i64() {
+        let mut ct: CoverTree<MetricI64> = CoverTree::from_items(test_i64_data().into_iter());
+
+        assert_eq!(ct.find_nearest(0).unwrap(), &0);
     }
 }
