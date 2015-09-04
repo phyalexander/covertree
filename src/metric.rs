@@ -36,8 +36,10 @@ macro_rules! make_metric {
 	)
 }
 
-
+make_metric!(MetricI8, i8);
+make_metric!(MetricI16, i16);
 make_metric!(MetricI32, i32);
 make_metric!(MetricI64, i64);
+
 make_metric!(MetricF32, f32);
 make_metric!(MetricF64, f64);
