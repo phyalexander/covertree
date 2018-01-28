@@ -9,7 +9,7 @@ keywords = ["nearest neighbor", "cover tree"]
 categories = []
 documentation = ""
 homepage = ""
-repository = "https://github.com/skyschermer/covertree-rs"
+repository = "https://github.com/skysch/covertree-rs"
 exclude = ["*.sublime-project", "*.sublime-workspace"]
 
 [lib]

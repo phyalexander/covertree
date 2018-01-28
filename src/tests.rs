@@ -10,8 +10,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 use CoverTree;
-use MetricI64;
-use MetricF64;
 
 
 fn test_f64_data() -> Vec<f64> {
@@ -44,19 +42,19 @@ fn test_i64_data() -> Vec<i64> {
 
 #[test]
 fn empty_tree() {
-    let ct: CoverTree<MetricF64> = CoverTree::new();
+    let ct: CoverTree<f64> = CoverTree::new();
     assert_eq!(ct.len(), 0);
 }
 
 #[test]
 fn from_items() {
-    let ct: CoverTree<MetricF64> = CoverTree::from_items(test_f64_data().into_iter());
+    let ct: CoverTree<f64> = CoverTree::from_items(test_f64_data().into_iter());
     assert_eq!(ct.len(), test_f64_data().len());
 }
 
 #[test]
 fn manual_insert() {
-    let mut ct: CoverTree<MetricF64> = CoverTree::new();
+    let mut ct: CoverTree<f64> = CoverTree::new();
 
     let data = &test_f64_data();
 
@@ -68,7 +66,7 @@ fn manual_insert() {
 
 #[test]
 fn nearest_neighbor_f64() {
-    let mut ct: CoverTree<MetricF64> = CoverTree::from_items(test_f64_data().into_iter());
+    let mut ct: CoverTree<f64> = CoverTree::from_items(test_f64_data().into_iter());
 
     assert_eq!(ct.find_nearest(0.0).unwrap(), &1.0);
     assert_eq!(ct.find_nearest(2.0).unwrap(), &1.0);
@@ -83,7 +81,7 @@ fn nearest_neighbor_f64() {
 
 #[test]
 fn nearest_neighbor_i64() {
-    let mut ct: CoverTree<MetricI64> = CoverTree::from_items(test_i64_data().into_iter());
+    let mut ct: CoverTree<i64> = CoverTree::from_items(test_i64_data().into_iter());
 
     assert_eq!(ct.find_nearest(0).unwrap(), &0);
 }
