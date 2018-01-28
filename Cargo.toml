@@ -1,10 +1,62 @@
 [package]
 name = "covertree"
-version = "0.1.0"
+version = "0.2.0" # Remember to update html_root_url.
 authors = ["Skylor R Schermer <skyschermer@gmail.com>"]
+description = "CoverTree library"
+license = "MIT, Apache 2.0"
+readme = "readme.md"
+keywords = ["nearest neighbor", "cover tree"]
+categories = []
+documentation = ""
+homepage = ""
+repository = "https://github.com/skyschermer/covertree-rs"
+exclude = ["*.sublime-project", "*.sublime-workspace"]
 
-[dependencies]
-num = "*"
+[lib]
+name = "covertree"
 
-[dependencies.treedisplay]
-path = "../treeutils-rs"
+# The development profile, used for `cargo build`
+[profile.dev]
+opt-level = 0
+debug = true
+rpath = false
+lto = false
+debug-assertions = true
+codegen-units = 1
+
+# The release profile, used for `cargo build --release`
+[profile.release]
+opt-level = 3
+debug = true
+rpath = false
+lto = false
+debug-assertions = false
+codegen-units = 1
+
+# The testing profile, used for `cargo test`
+[profile.test]
+opt-level = 0
+debug = true
+rpath = false
+lto = false
+debug-assertions = true
+codegen-units = 1
+
+# The benchmarking profile, used for `cargo bench`
+[profile.bench]
+opt-level = 3
+debug = false
+rpath = false
+lto = false
+debug-assertions = false
+codegen-units = 1
+
+# The documentation profile, used for `cargo doc`
+[profile.doc]
+opt-level = 0
+debug = true
+rpath = false
+lto = false
+debug-assertions = true
+codegen-units = 1
+
