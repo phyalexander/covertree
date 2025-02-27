@@ -1,4 +1,11 @@
-target
+# cargo
+/target
 Cargo.lock
+
+# IDE
+.idea/
 *.sublime-project
 *.sublime-workspace
+
+# mac os
+.DS_Store
