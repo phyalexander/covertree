@@ -46,7 +46,7 @@ pub const DEFAULT_SPAN_FACTOR: f64 = 1.3;
 // Point
 ////////////////////////////////////////////////////////////////////////////////
 /// Trait representing requirements for insertion into a `CoverTree`.
-pub trait Point: MetricSpace + PartialEq + PartialOrd + Copy {}
+pub trait Point: MetricSpace + PartialEq + Copy {}
 
 // Blanket impl.
-impl<T> Point for T where T: MetricSpace + PartialEq + PartialOrd + Copy {}
+impl<T> Point for T where T: MetricSpace + PartialEq + Copy {}
